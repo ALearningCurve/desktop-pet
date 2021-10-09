@@ -4,6 +4,7 @@ from animations import AnimationStates, Canvas, Animator
 
 
 class Pet:
+ size = 100
  x: int
  y: int
  canvas: Canvas
@@ -13,8 +14,16 @@ class Pet:
   self.x = x
   self.y = y
   self.canvas = canvas
-  self.animator = animator
-
+  self.animator = animator 
+ 
+ def keep_on_screen(self):
+  if (self.x < 0):
+      self.x = Pet.size
+  elif self.x > self.canvas.resolution["width"]:
+      self.x = self.canvas.resolution["width"] - Pet.size
+  if self.y > self.canvas.resolution["height"]:
+      self.y = self.y < self.canvas.resolution["height"]
+      
  def update(self):
   animation = self.get_current_animation()
   x, y = animation.get_velocity()
@@ -31,7 +40,7 @@ class Pet:
   """
   self.update()
   frame = self.draw()
-  self.canvas.window.geometry('100x100+'+str(self.x)+'+'+str(self.y))
+  self.canvas.window.geometry(str(Pet.size) + 'x' + str(Pet.size) + '+'+str(self.x)+'+'+str(self.y))
   self.canvas.label.configure(image=frame)
   self.canvas.window.after(1,self.handle_event)
 
@@ -43,13 +52,14 @@ class Pet:
   Raises:
       Exception: [description]
   """
-  animations = self.animator.animations
-  for key in animations.keys():
-   if self.animator.event_number in animations[key].event_numbers:
-    self.animator.state = key
-    self.canvas.window.after(animations[key].frame_timer,self.on_tick)
-    return
-  raise Exception("Current event number does not belong to any animation!")
+#   animations = self.animator.animations
+    #   for key in animations.keys():
+    #    if self.animator.event_number in animations[key].event_numbers:
+    #     self.animator.state = key
+    #     return
+    #   raise Exception("Current event number does not belong to any animation!")
+  self.canvas.window.after(self.animator.animations[self.animator.state].frame_timer,self.on_tick)
+
   
  #making gif work 
  def progress_animation(self):
@@ -58,7 +68,7 @@ class Pet:
    self.animator.frame_number+=1
   else:
    self.animator.frame_number = 0
-   self.animator.event_number = random.randrange(animation.next_event_number_min,animation.next_event_number_max+1,1)
+   self.animator.state = animation.next()
 
  def get_current_animation(self):
    return self.animator.animations[self.animator.state]
