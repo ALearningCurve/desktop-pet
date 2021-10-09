@@ -2,6 +2,7 @@ import pyautogui
 import random
 import tkinter as tk
 from enum import Enum
+from dataclasses import dataclass
 
 idle_num =[1,2,3,4]
 sleep_num = [10,11,12,13,15]
@@ -18,9 +19,8 @@ class AnimationStates(Enum):
  WALK_POSITIVE = 5
 
 class Pet:
- state: AnimationStates # check
-
- frame_number: int #cycle
+ state: AnimationStates 
+ frame_number: int
  x: int
  y: int
  event_number: int
@@ -33,34 +33,44 @@ class Pet:
   self.event_number = event_number
 
  def update_and_frame(self):
-  #idle
-  if self.state == AnimationStates.IDLE:
-   frame = idle[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,idle,1,9)
-  #idle to sleep
-  elif self.state == AnimationStates.IDLE_TO_SLEEP:
-   frame = idle_to_sleep[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,idle_to_sleep,10,10)#sleep
-  elif self.state == AnimationStates.SLEEP:
-   frame = sleep[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,sleep,10,15)#sleep to idle
-  elif self.state == AnimationStates.SLEEP_TO_IDLE:
-   frame = sleep_to_idle[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,sleep_to_idle,1,1)#walk toward left
-  elif self.state == AnimationStates.WALK_POSITIVE:
-   frame = walk_positive[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,walk_positive,1,9)
-   self.x -= 3#walk towards right
-  elif self.state == AnimationStates.WALK_NEGATIVE:
-   frame = walk_negative[self.frame_number]
-   self.frame_number, self.event_number = gif_work(self,walk_negative,1,9)
-   self.x -= -3
+  animation = ANIMATIONS[self.state]
+  animation.move()
+  frame = animation.frames[self.frame_number]
+  self.frame_number, self.event_number = gif_work(self, animation)
   return frame
 
-
-
 class Animation:
+ """Defines the event numbers for this animation 
+ and the ways this animation can transfer to the
+ next animation
+ """
  event_numbers: list[int]
+ # Number that can be trasnsfered to 
+ next_event_number_min: int
+ next_event_number_max: int
+ frames: list 
+
+ # the time between the frame being drawn in the animation
+ frame_timer: int
+ 
+ # Some animations require movement
+ v_x: int
+ v_y: int
+ 
+
+ def __init__(self, event_numbers, next_event_number_min, next_event_number_max, frames, frame_timer = 100, v_x = 0, v_y = 0):
+  self.event_numbers = event_numbers
+  self.next_event_number_min = next_event_number_min
+  self.next_event_number_max = next_event_number_max
+  self.frame_timer = frame_timer
+  self.frames = frames
+  self.v_x = v_x
+  self.v_y = v_y
+
+ def move(self):
+  pet.x += self.v_x
+  pet.y += self.v_y
+
 
 pet = Pet(state = AnimationStates.IDLE_TO_SLEEP, 
  event_number = random.randrange(1,3,1), 
@@ -75,38 +85,20 @@ def update(pet):
 
 #transfer random no. to event
 def event(pet):
- if pet.event_number in idle_num:
-  pet.state = AnimationStates.IDLE
-  print('idle')
-  window.after(400,update,pet)
-  return
- elif pet.event_number == 5:
-  pet.state = AnimationStates.IDLE_TO_SLEEP
-  print('from idle to sleep')
- elif pet.event_number in walk_left:
-  pet.state = AnimationStates.WALK_NEGATIVE
-  print('walking towards left')
- elif pet.event_number in walk_right:
-  pet.state = AnimationStates.WALK_POSITIVE
-  print('walking towards right')
- elif pet.event_number in sleep_num:
-  pet.state = AnimationStates.SLEEP
-  print('sleep')
-  window.after(1000,update,pet)
-  return
- elif pet.event_number == 14:
-  pet.state = AnimationStates.SLEEP_TO_IDLE
-  print('from sleep to idle')
- 
- window.after(100,update,pet)#no. 15 = sleep to idle
+ for key in ANIMATIONS.keys():
+  if pet.event_number in ANIMATIONS[key].event_numbers:
+   pet.state = key
+   window.after(ANIMATIONS[key].frame_timer,update,pet)
+   return
+ raise Exception("Current event number does not belong to any animation!")
   
 #making gif work 
-def gif_work(pet,frames,first_num,last_num):
- if pet.frame_number < len(frames) -1:
+def gif_work(pet: Pet,animation: Animation):
+ if pet.frame_number < len(animation.frames) -1:
   pet.frame_number+=1
  else:
   pet.frame_number = 0
-  pet.event_number = random.randrange(first_num,last_num+1,1)
+  pet.event_number = random.randrange(animation.next_event_number_min,animation.next_event_number_max+1,1)
  return pet.frame_number, pet.event_number
 
 window = tk.Tk()
@@ -117,6 +109,20 @@ sleep = [tk.PhotoImage(file=impath+'sleep.gif',format = 'gif -index %i' %(i)) fo
 sleep_to_idle = [tk.PhotoImage(file=impath+'sleep_to_idle.gif',format = 'gif -index %i' %(i)) for i in range(8)]#sleep to idle gif
 walk_positive = [tk.PhotoImage(file=impath+'walking_positive.gif',format = 'gif -index %i' %(i)) for i in range(8)]#walk to left gif
 walk_negative = [tk.PhotoImage(file=impath+'walking_negative.gif',format = 'gif -index %i' %(i)) for i in range(8)]#walk to right gif
+
+ANIMATIONS: dict[AnimationStates, Animation] = {
+ AnimationStates.IDLE: Animation([1,2,3,4], 1, 9, idle, 400),
+ AnimationStates.IDLE_TO_SLEEP: Animation([5], 10, 10, idle_to_sleep),
+ AnimationStates.SLEEP: Animation([10,11,12,13,15], 10, 15, sleep, 1000),
+ AnimationStates.SLEEP_TO_IDLE: Animation([14], 1, 1, sleep_to_idle),
+ AnimationStates.WALK_POSITIVE: Animation([8,9], 1, 9, walk_positive, v_x=3),
+ AnimationStates.WALK_NEGATIVE: Animation([6,7], 1, 9, walk_negative, v_x=-3),
+}
+
+
+
+assert(len(AnimationStates) == len(ANIMATIONS.keys()))
+
 
 #window configuration
 window.config(highlightbackground='black')
