@@ -1,6 +1,6 @@
 import random
 import tkinter as tk
-from animations import Animation, AnimationStates, Canvas, Animator
+from src.animations import Animation, AnimationStates, Canvas, Animator
 
 
 class Pet:

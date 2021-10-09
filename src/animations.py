@@ -1,8 +1,9 @@
 from enum import Enum
 import tkinter as tk
 import random
-from screeninfo import get_monitors
 from itertools import repeat
+import pathlib
+import os
 
 
 class Canvas:
@@ -18,7 +19,7 @@ class Canvas:
         """
         Args:
             window (tkinter.Tk)
-            label (tkinter.Label) 
+            label (tkinter.Label)
             resolution (dict[str, int]): must have "width" and "height" as keys
         """
         self.window = window
@@ -30,8 +31,8 @@ class Canvas:
 
 
 class AnimationStates(Enum):
-    """Represents all the possible animation states for our desktop pet
-    """
+    """Represents all the possible animation states for our desktop pet"""
+
     IDLE = 0
     IDLE_TO_SLEEP = 1
     SLEEP = 2
@@ -50,12 +51,15 @@ class Animation:
     """
 
     next_animation_states: list[AnimationStates]
+    """possible animations for after this animation"""
     frames: list
+    """List of frames in the animation"""
     frame_timer: int
+    """time in between every frame of the animation"""
     v_x: int
     v_y: int
-    repititions: int  # How many times to repeat given animation before moving onto the next animation
-    frame_multiplier: int  # Whether or not to duplicate frames (useful for fast updating animations)
+    repititions: int  
+    """ How many times to repeat given animation before moving onto the next animation """
 
     def __init__(
         self,
@@ -87,7 +91,7 @@ class Animation:
         self.repititions = repititions
 
     def next(self, animator) -> AnimationStates:
-        """Provides the next animation after this animation finishes. If there are repitions, then it will repeat until 
+        """Provides the next animation after this animation finishes. If there are repitions, then it will repeat until
         all the repitions are complete before transitionaing
 
         Args:
@@ -110,22 +114,39 @@ class Animation:
             tuple[int, int]: change in x, change in y
         """
         return (self.v_x, self.v_y)
-    
+
+    def load_frames(self):
+        #TODO: implement
+        pass
+
     def __repr__(self):
         return f"<Animation: {len(self.frames)} frames each at {self.frame_timer} ms>"
 
 
 class Animator:
+    """Holds information that is needed to play animations 
+    """
     frame_number: int
+    """Current frame of the animation"""
     state: AnimationStates
+    """Current animation state (ie the animation that should be playing"""
     animations: dict[AnimationStates, Animation]
+    """All supported animations"""
     repititions: int
+    """The current repitition of an animation that this is on"""
 
-    def __init__(self, frame_number, state, animations):
+    def __init__(self, frame_number: int, state: AnimationStates, animations: dict[AnimationStates, Animation], repititions = 0):
+        """
+        Args:
+            frame_number (int): Current frame number of the animation
+            state (AnimationStates): Current animation state
+            animations (dict[AnimationStates, Animation]): All possible animations to choose from
+            repititions (int): The current repitation of a animation that we are on. Defaults to 0.
+        """
         self.frame_number = frame_number
         self.state = state
         self.animations = animations
-        self.repititions = 0
+        self.repititions = repititions
 
     def set_state(self, state: AnimationStates) -> None:
         """Update the state and reset variables that change with each animation
@@ -133,63 +154,71 @@ class Animator:
         Args:
             state (AnimationStates): state to set
         """
+        # If the state is the same, then do nothing
+        # As we don't want the animation to keep reseting
         if state == self.state:
             return
         self.frame_number = 0
         self.state = state
-    
+
     def __repr__(self):
         return f"<Animator: {str(self.state)} on frame {self.frame_number}>"
 
 
-def get_animations(impath:str) -> dict[AnimationStates, Animation]:
+def get_animations() -> dict[AnimationStates, Animation]:
     """Loads all of the animations and their source files into a dictionary
-
-    Args:
-        impath (str): location of all of the animations
 
     Returns:
         dict[AnimationStates, Animation]
     """
-    idle = [
-        tk.PhotoImage(file=impath + "idle.gif", format="gif -index %i" % (i))
+    # Load the animation gifs from the sprite folder and make each of the gifs into a list of frames
+    # Path to sprites we want to use
+    impath = pathlib.Path().resolve()
+    _ = os.path.join
+    impath = _(impath, "src", "sprites", "cat")
+
+    # Convert into frames
+    idle_frames = [
+        tk.PhotoImage(file=_(impath, "idle.gif"), format="gif -index %i" % (i))
         for i in range(5)
-    ]  # idle gif
-    idle_to_sleep = [
-        tk.PhotoImage(file=impath + "idle_to_sleep.gif", format="gif -index %i" % (i))
+    ] 
+    idle_to_sleep_frames = [
+        tk.PhotoImage(file=_(impath, "idle_to_sleep.gif"), format="gif -index %i" % (i))
         for i in range(8)
-    ]  # idle to sleep gif
-    sleep = [
-        tk.PhotoImage(file=impath + "sleep.gif", format="gif -index %i" % (i))
+    ] 
+    sleep_frames = [
+        tk.PhotoImage(file=_(impath, "sleep.gif"), format="gif -index %i" % (i))
         for i in range(3)
-    ]  # sleep gif
-    sleep_to_idle = [
-        tk.PhotoImage(file=impath + "sleep_to_idle.gif", format="gif -index %i" % (i))
+    ] 
+    sleep_to_idle_frames = [
+        tk.PhotoImage(file=_(impath, "sleep_to_idle.gif"), format="gif -index %i" % (i))
         for i in range(8)
-    ]  # sleep to idle gif
-    walk_positive = [
+    ] 
+    walk_positive_frames = [
         tk.PhotoImage(
-            file=impath + "walking_positive.gif", format="gif -index %i" % (i)
+            file=_(impath, "walking_positive.gif"), format="gif -index %i" % (i)
         )
         for i in range(8)
-    ]  # walk to left gif
-    walk_negative = [
+    ]
+    walk_negative_frames = [
         tk.PhotoImage(
-            file=impath + "walking_negative.gif", format="gif -index %i" % (i)
+            file=_(impath, "walking_negative.gif"), format="gif -index %i" % (i)
         )
         for i in range(8)
-    ]  # walk to right gif
+    ] 
 
     standing_actions = [AnimationStates.IDLE_TO_SLEEP]
-    # make it less likely to sleep!
     standing_actions.extend(repeat(AnimationStates.IDLE, 3))
     standing_actions.extend(repeat(AnimationStates.WALK_NEGATIVE, 4))
     standing_actions.extend(repeat(AnimationStates.WALK_POSITIVE, 4))
 
+    # These are the animations that our spite can do. There should be one animation for 
+    # each of the AnimationStates
+    # TODO: Make it so that loads gif on init rather than having two seperate steps
     ANIMATIONS: dict[AnimationStates, Animation] = {
-        AnimationStates.IDLE: Animation(standing_actions, idle, frame_timer=400),
+        AnimationStates.IDLE: Animation(standing_actions, idle_frames, frame_timer=400),
         AnimationStates.IDLE_TO_SLEEP: Animation(
-            [AnimationStates.SLEEP], idle_to_sleep
+            [AnimationStates.SLEEP], idle_to_sleep_frames
         ),
         AnimationStates.SLEEP: Animation(
             [
@@ -199,21 +228,21 @@ def get_animations(impath:str) -> dict[AnimationStates, Animation]:
                 AnimationStates.SLEEP,
                 AnimationStates.SLEEP_TO_IDLE,
             ],
-            sleep,
+            sleep_frames,
             frame_timer=1000,
         ),
-        AnimationStates.SLEEP_TO_IDLE: Animation([AnimationStates.IDLE], sleep_to_idle),
+        AnimationStates.SLEEP_TO_IDLE: Animation([AnimationStates.IDLE], sleep_to_idle_frames),
         AnimationStates.WALK_POSITIVE: Animation(
-            standing_actions, walk_positive, v_x=3
+            standing_actions, walk_positive_frames, v_x=3
         ),
         AnimationStates.WALK_NEGATIVE: Animation(
-            standing_actions, walk_negative, v_x=-3
+            standing_actions, walk_negative_frames, v_x=-3
         ),
         AnimationStates.GRABBED: Animation(
-            [AnimationStates.GRABBED], walk_positive, frame_timer=50
+            [AnimationStates.GRABBED], walk_positive_frames, frame_timer=50
         ),
         AnimationStates.FALLING: Animation(
-            [AnimationStates.FALLING], walk_negative, frame_timer=10, frame_multiplier=2
+            [AnimationStates.FALLING], walk_negative_frames, frame_timer=10, frame_multiplier=2
         ),
     }
     ANIMATIONS[AnimationStates.LANDED] = ANIMATIONS[AnimationStates.IDLE]
