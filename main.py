@@ -37,4 +37,18 @@ pet = Pet(x, y, canvas=canvas, animator=animator)
 
 
 window.after(1,pet.on_tick)
+
+
+label.bind("<ButtonPress-1>", pet.start_move)
+label.bind("<ButtonRelease-1>", pet.stop_move)
+label.bind("<B1-Motion>", pet.do_move)
+
 window.mainloop()
+
+
+
+    # self.label = tk.Label(self, text="Click on the grip to move")
+    # self.grip = tk.Label(self, bitmap="gray25")
+    # self.grip.pack(side="left", fill="y")
+    # self.label.pack(side="right", fill="both", expand=True)
+
