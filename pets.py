@@ -23,7 +23,7 @@ class Pet:
       self.x = self.canvas.resolution["width"] - Pet.size
   if self.y > self.canvas.resolution["height"]:
       self.y = self.y < self.canvas.resolution["height"]
-      
+
  def update(self):
   animation = self.get_current_animation()
   x, y = animation.get_velocity()
@@ -52,12 +52,6 @@ class Pet:
   Raises:
       Exception: [description]
   """
-#   animations = self.animator.animations
-    #   for key in animations.keys():
-    #    if self.animator.event_number in animations[key].event_numbers:
-    #     self.animator.state = key
-    #     return
-    #   raise Exception("Current event number does not belong to any animation!")
   self.canvas.window.after(self.animator.animations[self.animator.state].frame_timer,self.on_tick)
 
   
@@ -68,7 +62,7 @@ class Pet:
    self.animator.frame_number+=1
   else:
    self.animator.frame_number = 0
-   self.animator.state = animation.next()
+   self.animator.state = animation.next(self.animator)
 
  def get_current_animation(self):
    return self.animator.animations[self.animator.state]

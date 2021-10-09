@@ -36,15 +36,22 @@ class Animation:
  frame_timer: int
  v_x: int
  v_y: int
+ repititions: int
 
- def __init__(self, next_animation_states, frames, frame_timer = 100, v_x = 0, v_y = 0):
+ def __init__(self, next_animation_states, frames, frame_timer = 100, v_x = 0, v_y = 0, repititions = 0):
     self.next_animation_states = next_animation_states
     self.frame_timer = frame_timer
     self.frames = frames
     self.v_x = v_x
     self.v_y = v_y
+    self.repititions = repititions
 
- def next(self):
+ def next(self, animator):
+    if animator.repititions < self.repititions:
+        animator.repititions += 1
+        return animator.state
+    else:
+        animator.repititions = 0 
     return random.choice(self.next_animation_states)
 
  def get_velocity(self):
@@ -55,11 +62,13 @@ class Animator:
     frame_number: int
     state: AnimationStates
     animations: dict[AnimationStates, Animation]
+    repititions: int
 
     def __init__(self, frame_number, state, animations):
         self.frame_number = frame_number
         self.state = state
         self.animations = animations
+        self.repititions = 0
 
 
 def get_animations(impath):
