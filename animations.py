@@ -1,6 +1,14 @@
 from enum import Enum
 import tkinter as tk
 
+class Canvas:
+ window: tk.Tk
+ label: tk.Label
+
+ def __init__(self, window, label):
+  self.window = window
+  self.label = label
+
 class AnimationStates(Enum):
  IDLE = 0
  IDLE_TO_SLEEP = 1
@@ -10,16 +18,7 @@ class AnimationStates(Enum):
  WALK_POSITIVE = 5
 
 
-class Animator:
-    event_number: int
-    frame_number: int
-    state: AnimationStates
 
-    def __init__(self, event_number, frame_number, state):
-        self.event_number = event_number
-        self.frame_number = frame_number
-        self.state = state
-        
 class Animation:
  """Defines the event numbers for this animation 
  and the ways this animation can transfer to the
@@ -70,3 +69,16 @@ def get_animations(impath):
 
     assert(len(AnimationStates) == len(ANIMATIONS.keys()))
     return ANIMATIONS
+
+
+class Animator:
+    event_number: int
+    frame_number: int
+    state: AnimationStates
+    animations: dict[AnimationStates, Animation]
+
+    def __init__(self, event_number, frame_number, state, animations):
+        self.event_number = event_number
+        self.frame_number = frame_number
+        self.state = state
+        self.animations = animations
