@@ -1,11 +1,16 @@
-import random
 import tkinter as tk
 from src.animations import Animation, AnimationStates, Canvas, Animator
 
-
+# ! IMPORTANT:
+# ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in its animator.animations dict for 
+# ! AnimationStates.FALLING, and then for the falling animation to end there must be an animation for AnimationStates.LANDED.
+# ! See the example in src.animations.get_cat_animations where although not having gif files for falling and landing animations 
+# ! other animations are repurposed for these animation states.
 class Pet:
-    """Represents a Virtual Desktop Pet that has animations, basic physics, can be picked up, and will stay on screen
+    """Represents a Virtual Desktop Pet that has animations, basic physics, can be picked up, and will stay on screen.
+    This class can use a variety of diferent animations as definied in its animator.
     """
+
     size = 100
     x: int
     y: int
@@ -23,17 +28,20 @@ class Pet:
     def do_movement(self):
         """Keep the pet on the screen and if the pet is in the air, then make the pet fall down to the "floor"
         """
+        # check and move x to be on screen
         if self.x < 0:
             self.x = Pet.size
         if self.x > self.canvas.resolution["width"] - Pet.size:
             self.x = self.canvas.resolution["width"] - Pet.size
 
         # do stuff with the y position
+        # to make sure the pet falls to ground and is not off the bottom of the screen
         if self.y > self.canvas.resolution["height"]:
             self.y = self.canvas.resolution["height"]
             if self.animator.state == AnimationStates.FALLING:
                 self.v_y = 0
-                self.animator.set_state(AnimationStates.LANDED)
+                if AnimationStates.LANDED in self.animator.animations:
+                    self.animator.set_state(AnimationStates.LANDED)
 
         if self.animator.state == AnimationStates.FALLING:
             self.v_y += self.a_y
@@ -116,11 +124,13 @@ class Pet:
     #################################################### Event Handlers
     def start_move(self, event):
         """ Mouse 1 click """
-        self.animator.set_state(AnimationStates.GRABBED)
+        if AnimationStates.GRABBED in self.animator.animations:
+            self.animator.set_state(AnimationStates.GRABBED)
         self.v_y = 0
     def stop_move(self, event):
         """ Mouse 1 release """
-        self.animator.set_state(AnimationStates.FALLING)
+        if AnimationStates.GRABBED in self.animator.animations:
+            self.animator.set_state(AnimationStates.FALLING)
 
     def do_move(self, event):
         """ Mouse movement while clicked """

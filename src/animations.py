@@ -4,6 +4,7 @@ import random
 from itertools import repeat
 import pathlib
 import os
+from PIL import Image
 
 
 class Canvas:
@@ -58,13 +59,14 @@ class Animation:
     """time in between every frame of the animation"""
     v_x: int
     v_y: int
-    repititions: int  
+    repititions: int
     """ How many times to repeat given animation before moving onto the next animation """
 
     def __init__(
         self,
         next_animation_states,
-        frames,
+        frames: list = None,
+        gif_location: str = None,
         frame_timer=100,
         v_x=0,
         v_y=0,
@@ -75,7 +77,9 @@ class Animation:
         Args:
             next_animation_states (list[Animations]): possible animations for this animation
             to transition to once this animation finishes
-            frames (list[tk.PhotoImage]): frames of images that can be rendered by tkinter
+            frames (list[tk.PhotoImage], optional): frames of images that can be rendered by tkinter. Defaults to None.
+            frames (list[tk.PhotoImage], optional): frames of images that can be rendered by tkinter. Defaults to None.
+
             frame_timer (int, optional): time in between every frame of the animation. Defaults to 100.
             v_x (int, optional): change in x for every frame of the animation. Defaults to 0.
             v_y (int, optional): change in y for every frame of the animation. Defaults to 0.
@@ -85,10 +89,43 @@ class Animation:
         """
         self.next_animation_states = next_animation_states
         self.frame_timer = frame_timer
-        self.frames = [x for item in frames for x in repeat(item, frame_multiplier)]
         self.v_x = v_x
         self.v_y = v_y
         self.repititions = repititions
+
+        # Get and set the frames
+        # Make sure that we have only one source for the frames
+        if (frames is None and gif_location is None) or (
+            frames is not None and gif_location is not None
+        ):
+            raise Exception(
+                f"Animation requires either arg 'frames' or 'frame_location', not both. instead recieved {type(frames)} and {type(gif_location)}"
+            )
+
+        if gif_location is not None:
+            frames = Animation.load_gif_to_frames(gif_location)
+
+        self.frames = [x for item in frames for x in repeat(item, frame_multiplier)]
+
+    @staticmethod
+    def load_gif_to_frames(path: str) -> list[tk.PhotoImage]:
+        """Given a path to a .gif file create and load the frames in the gif. Returns the frames of GIF as a list
+
+        Args:
+            path (str) Path to the gif file
+
+        Returns:
+            list[tk.PhotoImage]: List of images of the frames in the gif
+        """
+
+        file = Image.open(path)
+        number_of_frames = file.n_frames
+
+        frames = [
+            tk.PhotoImage(file=path, format="gif -index %i" % (i))
+            for i in range(number_of_frames)
+        ]
+        return frames
 
     def next(self, animator) -> AnimationStates:
         """Provides the next animation after this animation finishes. If there are repitions, then it will repeat until
@@ -115,17 +152,13 @@ class Animation:
         """
         return (self.v_x, self.v_y)
 
-    def load_frames(self):
-        #TODO: implement
-        pass
-
     def __repr__(self):
         return f"<Animation: {len(self.frames)} frames each at {self.frame_timer} ms>"
 
 
 class Animator:
-    """Holds information that is needed to play animations 
-    """
+    """Holds information that is needed to play animations"""
+
     frame_number: int
     """Current frame of the animation"""
     state: AnimationStates
@@ -135,7 +168,13 @@ class Animator:
     repititions: int
     """The current repitition of an animation that this is on"""
 
-    def __init__(self, frame_number: int, state: AnimationStates, animations: dict[AnimationStates, Animation], repititions = 0):
+    def __init__(
+        self,
+        frame_number: int,
+        state: AnimationStates,
+        animations: dict[AnimationStates, Animation],
+        repititions=0,
+    ):
         """
         Args:
             frame_number (int): Current frame number of the animation
@@ -165,60 +204,54 @@ class Animator:
         return f"<Animator: {str(self.state)} on frame {self.frame_number}>"
 
 
-def get_animations() -> dict[AnimationStates, Animation]:
-    """Loads all of the animations and their source files into a dictionary
-
+def get_animations(pet_name: str = "cat") -> dict[AnimationStates, Animation]:
+    """Loads all of the animations for a pet and their source files into a dictionary
+    Args:
+        pet_name (str): name of the pet, ie the name of folder its animations are in 
     Returns:
         dict[AnimationStates, Animation]
     """
     # Load the animation gifs from the sprite folder and make each of the gifs into a list of frames
     # Path to sprites we want to use
     impath = pathlib.Path().resolve()
-    _ = os.path.join
-    impath = _(impath, "src", "sprites", "cat")
+    impath = os.path.join(impath, "src", "sprites", pet_name)
 
-    # Convert into frames
-    idle_frames = [
-        tk.PhotoImage(file=_(impath, "idle.gif"), format="gif -index %i" % (i))
-        for i in range(5)
-    ] 
-    idle_to_sleep_frames = [
-        tk.PhotoImage(file=_(impath, "idle_to_sleep.gif"), format="gif -index %i" % (i))
-        for i in range(8)
-    ] 
-    sleep_frames = [
-        tk.PhotoImage(file=_(impath, "sleep.gif"), format="gif -index %i" % (i))
-        for i in range(3)
-    ] 
-    sleep_to_idle_frames = [
-        tk.PhotoImage(file=_(impath, "sleep_to_idle.gif"), format="gif -index %i" % (i))
-        for i in range(8)
-    ] 
-    walk_positive_frames = [
-        tk.PhotoImage(
-            file=_(impath, "walking_positive.gif"), format="gif -index %i" % (i)
-        )
-        for i in range(8)
-    ]
-    walk_negative_frames = [
-        tk.PhotoImage(
-            file=_(impath, "walking_negative.gif"), format="gif -index %i" % (i)
-        )
-        for i in range(8)
-    ] 
+    # **** This can be whatever set of animations you want it to be
+    # **** I just like horses so I have set it to that
+    animations = get_horse_animations(impath)
+
+    return animations
+
+
+def get_cat_animations(impath:str):
+    """Loads all of the animations for a cat
+    Args:
+        impath (str): path to the folder the animations are in
+    Returns:
+        dict[AnimationStates, Animation]
+    """
+    pj = os.path.join
 
     standing_actions = [AnimationStates.IDLE_TO_SLEEP]
     standing_actions.extend(repeat(AnimationStates.IDLE, 3))
     standing_actions.extend(repeat(AnimationStates.WALK_NEGATIVE, 4))
     standing_actions.extend(repeat(AnimationStates.WALK_POSITIVE, 4))
 
-    # These are the animations that our spite can do. There should be one animation for 
-    # each of the AnimationStates
-    # TODO: Make it so that loads gif on init rather than having two seperate steps
-    ANIMATIONS: dict[AnimationStates, Animation] = {
-        AnimationStates.IDLE: Animation(standing_actions, idle_frames, frame_timer=400),
+    # These are the animations that our spite can do.
+    # ! IMPORTANT:
+    # ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in the animations dict for 
+    # ! AnimationStates.FALLING, and then for the falling animation to end there must be an animation for AnimationStates.LANDED.
+    # ! See the example in src.animations.get_cat_animations where although not having gif files for falling and landing animations 
+    # ! other animations are repurposed for these animation states.
+    animations: dict[AnimationStates, Animation] = {
+        AnimationStates.IDLE: Animation(
+            standing_actions, 
+            gif_location=pj(impath, "idle.gif"), 
+            frame_timer=400
+        ),
         AnimationStates.IDLE_TO_SLEEP: Animation(
-            [AnimationStates.SLEEP], idle_to_sleep_frames
+            [AnimationStates.SLEEP], 
+            gif_location=pj(impath, "idle_to_sleep.gif")
         ),
         AnimationStates.SLEEP: Animation(
             [
@@ -228,24 +261,67 @@ def get_animations() -> dict[AnimationStates, Animation]:
                 AnimationStates.SLEEP,
                 AnimationStates.SLEEP_TO_IDLE,
             ],
-            sleep_frames,
+            gif_location=pj(impath, "sleep.gif"),
             frame_timer=1000,
         ),
-        AnimationStates.SLEEP_TO_IDLE: Animation([AnimationStates.IDLE], sleep_to_idle_frames),
+        AnimationStates.SLEEP_TO_IDLE: Animation(
+            [AnimationStates.IDLE], 
+            gif_location=pj(impath, "sleep_to_idle.gif")
+        ),
         AnimationStates.WALK_POSITIVE: Animation(
-            standing_actions, walk_positive_frames, v_x=3
+            standing_actions,
+            gif_location=pj(impath, "walking_positive.gif"), 
+            v_x=3
         ),
         AnimationStates.WALK_NEGATIVE: Animation(
-            standing_actions, walk_negative_frames, v_x=-3
+            standing_actions, 
+            gif_location=pj(impath, "walking_negative.gif"), 
+            v_x=-3
         ),
+        # There is no grabbed gif, so just speed up the walking gif
         AnimationStates.GRABBED: Animation(
-            [AnimationStates.GRABBED], walk_positive_frames, frame_timer=50
+            [AnimationStates.GRABBED],
+            gif_location=pj(impath, "walking_positive.gif"),
+            frame_timer=50,
         ),
+        # There is no falling gif, so just speed up the walking gif
+        # but as position updates after every frame of animation, incease 
+        # update speed to be smoother (increase duplicate frames to prevent)
+        # spazzing looking cat
         AnimationStates.FALLING: Animation(
-            [AnimationStates.FALLING], walk_negative_frames, frame_timer=10, frame_multiplier=2
+            [AnimationStates.FALLING],
+            gif_location=pj(impath, "walking_negative.gif"),
+            frame_timer=10,
+            frame_multiplier=2,
         ),
     }
-    ANIMATIONS[AnimationStates.LANDED] = ANIMATIONS[AnimationStates.IDLE]
+    # No landed animation, but instead return the cat to its idle animation so that 
+    # it can go to a next animation state after falling
+    animations[AnimationStates.LANDED] = animations[AnimationStates.IDLE]
+    return animations
 
-    assert len(AnimationStates) == len(ANIMATIONS.keys())
-    return ANIMATIONS
+
+def get_horse_animations(impath:str):
+    """Loads all of the animations for a horse
+    Args:
+        impath (str): path to the folder the animations are in
+    Returns:
+        dict[AnimationStates, Animation]
+    """
+    pj = os.path.join
+
+
+    # These are the animations that our spite can do. 
+    # ! IMPORTANT:
+    # ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in the animations dict for 
+    # ! AnimationStates.FALLING, and then for the falling animation to end there must be an animation for AnimationStates.LANDED.
+    # ! See the example in src.animations.get_cat_animations where although not having gif files for falling and landing animations 
+    # ! other animations are repurposed for these animation states.
+    animations: dict[AnimationStates, Animation] = {
+        AnimationStates.IDLE: Animation(
+            [AnimationStates.IDLE], 
+            gif_location=pj(impath, "idle.gif"), 
+            frame_timer=400
+        )
+    }
+    return animations
