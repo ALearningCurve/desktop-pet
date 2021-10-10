@@ -4,6 +4,8 @@ import random
 from itertools import repeat
 import pathlib
 import os
+from os import listdir
+from os.path import isfile, join
 from PIL import Image
 
 
@@ -61,31 +63,37 @@ class Animation:
     v_y: int
     repititions: int
     """ How many times to repeat given animation before moving onto the next animation """
+    target_resolution: tuple[int, int]
 
     def __init__(
         self,
         next_animation_states,
         frames: list = None,
         gif_location: str = None,
+        image_location: str = None,
         frame_timer=100,
         v_x=0,
         v_y=0,
         repititions=0,
         frame_multiplier=1,
+        target_resolution: tuple[int, int] = (100, 100)
     ):
         """
         Args:
             next_animation_states (list[Animations]): possible animations for this animation
             to transition to once this animation finishes
             frames (list[tk.PhotoImage], optional): frames of images that can be rendered by tkinter. Defaults to None.
-            frames (list[tk.PhotoImage], optional): frames of images that can be rendered by tkinter. Defaults to None.
-
+            gif_location (str, optional): Absolute path to the gif to convert into frames. Defaults to None.
+            image_location (str, optional): Absolute path to the images folder to load into frames list. Defaults to None.
+            target_resolution (tuple[int, int], optional): Resolution of the frames of the animation, when drawn the canvas will be this big.
+            target_resolution[0] is x width, and target_resolution[1] is y width. Defaults to (100, 100).
             frame_timer (int, optional): time in between every frame of the animation. Defaults to 100.
             v_x (int, optional): change in x for every frame of the animation. Defaults to 0.
             v_y (int, optional): change in y for every frame of the animation. Defaults to 0.
             repititions (int, optional): how many times this animation should repeat before transitioning to the next animation. Defaults to 0.
             frame_multiplier (int, optional): how many times to duplicate frames in the frames array. This is useful for really
             fast animations (ie have low frame_timer) to keep the animation updating position but not spazzing out the sprite. Defaults to 1.
+        
         """
         self.next_animation_states = next_animation_states
         self.frame_timer = frame_timer
@@ -95,18 +103,21 @@ class Animation:
 
         # Get and set the frames
         # Make sure that we have only one source for the frames
-        if (frames is None and gif_location is None) or (
-            frames is not None and gif_location is not None
-        ):
-            raise Exception(
-                f"Animation requires either arg 'frames' or 'frame_location', not both. instead recieved {type(frames)} and {type(gif_location)}"
-            )
+        if frames is None:
+            if gif_location is not None:
+                frames = Animation.load_gif_to_frames(gif_location)
+            elif image_location is not None:
+                frames = Animation.load_images_to_frames(image_location)
+            else:
+                raise Exception("Recieved neither the frames or locations to load the frames. Could not make animation")
+        if len(frames) == 0:
+            raise Exception("There must be a least one frame in the frames list")
 
-        if gif_location is not None:
-            frames = Animation.load_gif_to_frames(gif_location)
-
+        self.target_resolution = target_resolution
+        # TODO: Fix so it applies the scaling of the resolution
+        frames = Animation.apply_target_resolution(frames, target_resolution)
         self.frames = [x for item in frames for x in repeat(item, frame_multiplier)]
-
+            
     @staticmethod
     def load_gif_to_frames(path: str) -> list[tk.PhotoImage]:
         """Given a path to a .gif file create and load the frames in the gif. Returns the frames of GIF as a list
@@ -120,11 +131,56 @@ class Animation:
 
         file = Image.open(path)
         number_of_frames = file.n_frames
+        file.close()
 
         frames = [
             tk.PhotoImage(file=path, format="gif -index %i" % (i))
             for i in range(number_of_frames)
         ]
+        return frames
+    
+    @staticmethod
+    def load_images_to_frames(path: str ):
+        files = [join(path, f) for f in listdir(path) if isfile(join(path, f))]
+        frames = [
+            tk.PhotoImage(file=path)
+            for path in files        
+        ]
+        return frames
+
+    @staticmethod
+    def apply_target_resolution(frames: list[tk.PhotoImage], target_resolution: tuple[int, int]) -> list[tk.PhotoImage]:
+        """Given a list of frames, scale it to a certain resolution
+
+        Args:
+            frames (list[tk.PhotoImage]) List of frames to alter
+            target_resolution (tuple[int, int]) scale to apply where tuple[0] is x width and tuple[1] is y width
+
+
+        Returns:
+            list[tk.PhotoImage]: List of images of the frames in the gif
+        """
+        
+        for i in range(len(frames)):
+            image = frames[i]
+            scale_w = target_resolution[0]/image.width()
+            scale_h = target_resolution[1]/image.height()
+            print(scale_w, scale_h)
+            # downscale
+            if scale_w < 1:
+                print
+                image = image.subsample(int(1/scale_w), 1)
+            # upscale
+            elif scale_w > 1:
+                image = image.zoom(int(scale_w), 1)
+            # downscale
+            if scale_h < 1:
+                image = image.subsample(1, int(1/scale_h))
+            # upscale
+            elif scale_h > 1:
+                image = image.zoom(1, int(scale_h))
+            # image.zoom(scale_w, scale_h)
+            frames[i] = image
         return frames
 
     def next(self, animator) -> AnimationStates:
@@ -214,7 +270,7 @@ def get_animations(pet_name: str = "cat") -> dict[AnimationStates, Animation]:
     # Load the animation gifs from the sprite folder and make each of the gifs into a list of frames
     # Path to sprites we want to use
     impath = pathlib.Path().resolve()
-    impath = os.path.join(impath, "src", "sprites", pet_name)
+    impath = os.path.join(impath, "src", "sprites")
 
     # **** This can be whatever set of animations you want it to be
     # **** I just like horses so I have set it to that
@@ -231,7 +287,7 @@ def get_cat_animations(impath:str):
         dict[AnimationStates, Animation]
     """
     pj = os.path.join
-
+    impath = pj(impath, "cat")
     standing_actions = [AnimationStates.IDLE_TO_SLEEP]
     standing_actions.extend(repeat(AnimationStates.IDLE, 3))
     standing_actions.extend(repeat(AnimationStates.WALK_NEGATIVE, 4))
@@ -309,8 +365,8 @@ def get_horse_animations(impath:str):
         dict[AnimationStates, Animation]
     """
     pj = os.path.join
-
-
+    impath = pj(impath, "horse")
+    resolution = (400, 400)
     # These are the animations that our spite can do. 
     # ! IMPORTANT:
     # ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in the animations dict for 
@@ -321,7 +377,8 @@ def get_horse_animations(impath:str):
         AnimationStates.IDLE: Animation(
             [AnimationStates.IDLE], 
             gif_location=pj(impath, "idle.gif"), 
-            frame_timer=400
+            frame_timer=400,
+            target_resolution=resolution
         )
     }
     return animations

@@ -11,7 +11,7 @@ class Pet:
     This class can use a variety of diferent animations as definied in its animator.
     """
 
-    size = 100
+    """ Pixel size of the pet's gif """
     x: int
     y: int
     v_y: float = 0
@@ -29,10 +29,11 @@ class Pet:
         """Keep the pet on the screen and if the pet is in the air, then make the pet fall down to the "floor"
         """
         # check and move x to be on screen
+        size = self.animator.animations[self.animator.state].target_resolution
         if self.x < 0:
-            self.x = Pet.size
-        if self.x > self.canvas.resolution["width"] - Pet.size:
-            self.x = self.canvas.resolution["width"] - Pet.size
+            self.x = size[0]
+        if self.x > self.canvas.resolution["width"] - size[0]:
+            self.x = self.canvas.resolution["width"] - size[0]
 
         # do stuff with the y position
         # to make sure the pet falls to ground and is not off the bottom of the screen
@@ -114,12 +115,14 @@ class Pet:
     def set_geometry(self):
         """Update the window position and scale to match that of the pet instance's location and size
         """
+        size = self.animator.animations[self.animator.state].target_resolution
         self.canvas.window.geometry(
-            str(Pet.size) + "x" + str(Pet.size) + "+" + str(self.x) + "+" + str(self.y)
+            str(size[0]) + "x" + str(size[1]) + "+" + str(self.x) + "+" + str(self.y)
         )
     
     def __repr__(self):
-        return f"<VirtualPet of {Pet.size}x{Pet.size} at ({self.x}, {self.y}) using {str(self.animator)} and {str(self.canvas)}>"
+        size = self.animator.animations[self.animator.state].target_resolution
+        return f"<VirtualPet of {size[0]}x{size[1]} at ({self.x}, {self.y}) using {str(self.animator)} and {str(self.canvas)}>"
 
     #################################################### Event Handlers
     def start_move(self, event):

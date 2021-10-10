@@ -8,7 +8,8 @@ def create_pet():
 
     # Configuration
 
-    offset = 400
+    offset = 1000
+
 
     # Get info on the monitor
     monitor = get_monitors()[0]
@@ -16,10 +17,15 @@ def create_pet():
 
     # window configuration
     window = tk.Tk()
-    window.config(highlightbackground="black")
-    label = tk.Label(window, bd=0, bg="black")
-    window.overrideredirect(True)
-    window.wm_attributes("-transparentcolor", "black")
+
+    # ! We pick a transparent color here for the background
+    # ! This can be different for mac as mac os has alpha channel
+    if True:
+        bg_color = "#ff0000"
+        window.config(highlightbackground=bg_color)
+        label = tk.Label(window, bd=0, bg=bg_color)
+        window.overrideredirect(True)
+        window.wm_attributes("-transparentcolor", bg_color)
     label.pack()  # loop the program
     canvas = Canvas(window, label, resolution)
 
