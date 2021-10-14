@@ -1,19 +1,25 @@
-import pathlib
-import os
-def create_pet():    
-    import tkinter as tk
-    from src.animations import AnimationStates, Canvas, Animator, get_animations
-    from src.pets import Pet
-    from screeninfo import get_monitors
+import tkinter as tk
+from src.animations import AnimationStates, Canvas, Animator, get_animations, run_preprocessing
+from src.pets import Pet
+from screeninfo import get_monitors
 
+def create_pet(should_run_preprocessing = False) -> Pet:
+    """Creates a pet from the configuration object
+
+    Returns:
+        Pet
+    """
     # Configuration
-
-    offset = 1000
-
-
-    # Get info on the monitor
+    # TODO Move this into the conifg.json or .xml idc
+    offset = 100
+    bg_color = "#ff0000" # ! this color will need to change for each of the different background color in order for it to be transparent
+    # Get info on the primary monitor (that is where the pet will be)
     monitor = get_monitors()[0]
     resolution = {"width": int(monitor.width), "height": int(monitor.height - offset)}
+    # Stuff for the animation
+    target_resolution = (300,300)
+    animation_type = "horse"
+
 
     # window configuration
     window = tk.Tk()
@@ -21,7 +27,6 @@ def create_pet():
     # ! We pick a transparent color here for the background
     # ! This can be different for mac as mac os has alpha channel
     if True:
-        bg_color = "#ff0000"
         window.config(highlightbackground=bg_color)
         label = tk.Label(window, bd=0, bg=bg_color)
         window.overrideredirect(True)
@@ -31,7 +36,10 @@ def create_pet():
 
     # Load the animations. 
     # ! NOTE, this has to be done after setting up the tikinter window
-    ANIMATIONS = get_animations()
+    if should_run_preprocessing:
+        ANIMATIONS = run_preprocessing(animation_type, target_resolution)
+    else:
+        ANIMATIONS = get_animations(animation_type, target_resolution)
 
     # Create the desktop pet
     animator = Animator(state=AnimationStates.IDLE, frame_number=0, animations=ANIMATIONS)
@@ -47,3 +55,5 @@ def create_pet():
     label.bind("<B1-Motion>", pet.do_move)
 
     window.mainloop()
+
+    return pet

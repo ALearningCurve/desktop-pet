@@ -37,8 +37,8 @@ class Pet:
 
         # do stuff with the y position
         # to make sure the pet falls to ground and is not off the bottom of the screen
-        if self.y > self.canvas.resolution["height"]:
-            self.y = self.canvas.resolution["height"]
+        if self.y > self.canvas.resolution["height"] - size[1]:
+            self.y = self.canvas.resolution["height"] - size[1]
             if self.animator.state == AnimationStates.FALLING:
                 self.v_y = 0
                 if AnimationStates.LANDED in self.animator.animations:
@@ -130,15 +130,20 @@ class Pet:
         if AnimationStates.GRABBED in self.animator.animations:
             self.animator.set_state(AnimationStates.GRABBED)
         self.v_y = 0
+
     def stop_move(self, event):
         """ Mouse 1 release """
-        if AnimationStates.GRABBED in self.animator.animations:
+        # to transfer out of the falling state, there has to be a landed state. Do not go into the falling state unless
+        # landed state and falling state are defined
+        if AnimationStates.FALLING in self.animator.animations and AnimationStates.LANDED in self.animator.animations:
             self.animator.set_state(AnimationStates.FALLING)
 
     def do_move(self, event):
         """ Mouse movement while clicked """
+        size = self.animator.animations[self.animator.state].target_resolution
+
         self.progress_animation()
-        self.x = event.x_root
-        self.y = event.y_root
+        self.x = event.x_root - int(size[0] / 2)
+        self.y = event.y_root - int(size[1] / 2)
         self.v_y = 0
         self.set_geometry()
