@@ -164,8 +164,7 @@ class Animation:
         """
 
         # Get all the images from the folder and sort alphabetically
-        files = [join(path, f) for f in sorted(listdir(path)) if isfile(join(path, f))]
-        print("should preprocess", Animation.should_run_preprocessing)
+        files = [join(path, f) for f in sorted(listdir(path)) if (isfile(join(path, f)) and f.split(".").pop().lower() == "png")]
         if Animation.should_run_preprocessing:
             for path in files:
                 Animation.remove_partial_transparency_png(path)
@@ -309,6 +308,7 @@ class Animator:
         """
         # If the state is the same, then do nothing
         # As we don't want the animation to keep reseting
+        print("LOG:INFO:: ", self.state, " to ", state)
         if state == self.state:
             return
         self.frame_number = 0
@@ -443,11 +443,11 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
     pj = os.path.join
     impath = pj(impath, "horse", "Horse")
     standing_actions = [AnimationStates.IDLE_TO_SLEEP]
-    standing_actions.extend(repeat(AnimationStates.IDLE, 3))
+    # standing_actions.extend(repeat(AnimationStates.IDLE, 3))
     standing_actions.extend(repeat(AnimationStates.WALK_NEGATIVE, 4))
     standing_actions.extend(repeat(AnimationStates.WALK_POSITIVE, 4))
     standing_actions.extend(repeat(AnimationStates.GRAZING_START, 4))
-    
+
     # These are the animations that our spite can do. 
     # ! IMPORTANT:
     # ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in the animations dict for 
@@ -456,14 +456,15 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
     # ! other animations are repurposed for these animation states.
     animations: dict[AnimationStates, Animation] = {
         AnimationStates.IDLE: Animation(
-            [AnimationStates.IDLE], 
+            standing_actions, 
             images_location=pj(impath, "Idle", "Right"), 
             frame_timer=400,
             target_resolution=target_resolution
         ),
         AnimationStates.IDLE_TO_SLEEP: Animation(
             [AnimationStates.SLEEP], 
-            gif_location=pj(impath, "idle_to_sleep.gif"),
+            images_location=pj(impath, "Sleep", "IdleToSleep"),
+            frame_timer=400,
             target_resolution=target_resolution
         ),
         AnimationStates.SLEEP: Animation(
@@ -474,31 +475,34 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
                 AnimationStates.SLEEP,
                 AnimationStates.SLEEP_TO_IDLE,
             ],
-            gif_location=pj(impath, "sleep.gif"),
-            frame_timer=1000,
+            images_location=pj(impath, "Sleep", "Sleeping"),
+            frame_timer=2000,
             target_resolution=target_resolution
         ),
         AnimationStates.SLEEP_TO_IDLE: Animation(
             [AnimationStates.IDLE], 
-            gif_location=pj(impath, "sleep_to_idle.gif"),
+            images_location=pj(impath, "Sleep", "IdleToSleep"),
+            frame_timer=600,
             target_resolution=target_resolution
         ),
         AnimationStates.WALK_POSITIVE: Animation(
             standing_actions,
-            gif_location=pj(impath, "walking_positive.gif"), 
+            images_location=pj(impath, "Walking"), 
+            frame_timer=400,
             v_x=3,
             target_resolution=target_resolution
         ),
         AnimationStates.WALK_NEGATIVE: Animation(
             standing_actions, 
-            gif_location=pj(impath, "walking_negative.gif"), 
+            images_location=pj(impath, "Walking"), 
+            frame_timer=400,
             v_x=-3,
             target_resolution=target_resolution
         ),
         # There is no grabbed gif, so just speed up the walking gif
         AnimationStates.GRABBED: Animation(
             [AnimationStates.GRABBED],
-            gif_location=pj(impath, "walking_positive.gif"),
+            images_location=pj(impath, "MouseInteractions", "Grabbed"),
             frame_timer=50,
             target_resolution=target_resolution
         ),
@@ -508,11 +512,32 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
         # spazzing looking cat
         AnimationStates.FALLING: Animation(
             [AnimationStates.FALLING],
-            gif_location=pj(impath, "walking_negative.gif"),
+            images_location=pj(impath, "MouseInteractions", "Falling"),
             frame_timer=10,
             frame_multiplier=2,
             target_resolution=target_resolution
         ),
-    }
+        AnimationStates.GRAZING_START: Animation(
+            [AnimationStates.GRAZING],
+            images_location=pj(impath, "Grazing", "Transition"),
+            frame_timer=500,
+            target_resolution=target_resolution
+        ),
+        AnimationStates.GRAZING_END: Animation(
+            standing_actions,
+            images_location=pj(impath, "Grazing", "Transition"),
+            frame_timer=1000,
+            target_resolution=target_resolution
+        ),
+        AnimationStates.GRAZING: Animation(
+            [
+                AnimationStates.GRAZING,
+                AnimationStates.GRAZING,
+                AnimationStates.GRAZING_END
+            ],
+            images_location=pj(impath, "Grazing", "Active"),
+            frame_timer=700,
+            target_resolution=target_resolution
+        ),
     }
     return animations
