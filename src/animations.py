@@ -67,9 +67,14 @@ class Animation:
     frames: list
     """List of frames in the animation"""
     frame_timer: int
-    """time in between every frame of the animation"""
+    """time in between every frame of the animation. Should be at most 100ms, otherwise time between
+    updates will be too long and will appear laggy. To achieve slower animation at 100ms (or less) user
+    frame_multiplier function in init method. (by default if frame_timer>100 then frame_multipler will
+    be applied automatically to keep same time between visual image changes (see __init__)"""
     v_x: int
     v_y: int
+    a_x: int
+    a_y: int    
     repititions: int
     """ How many times to repeat given animation before moving onto the next animation """
     target_resolution: tuple[int, int]
@@ -86,9 +91,12 @@ class Animation:
         frame_timer=100,
         v_x=0,
         v_y=0,
+        a_x=0,
+        a_y=0,
         repititions=0,
-        frame_multiplier=1,
+        frame_multiplier: int=None,
         target_resolution: tuple[int, int] = (100, 100),
+        reverse:bool = False
     ):
         """
         Args:
@@ -104,16 +112,24 @@ class Animation:
             v_y (int, optional): change in y for every frame of the animation. Defaults to 0.
             repititions (int, optional): how many times this animation should repeat before transitioning to the next animation. Defaults to 0.
             frame_multiplier (int, optional): how many times to duplicate frames in the frames array. This is useful for really
-            fast animations (ie have low frame_timer) to keep the animation updating position but not spazzing out the sprite. Defaults to 1.
+            fast animations (ie have low frame_timer) to keep the animation updating position but not spazzing out the sprite. Defaults to None.
+            if None will duplicate frames to keep updating animation automatically every 100 ms. (Prevents "laggy" mouse interactions)
+            reverse (bool, optional): Wether or not to reverse the loaded frames (useful for transition animations)
         """
         self.next_animation_states = next_animation_states
         self.frame_timer = frame_timer
         self.v_x = v_x
         self.v_y = v_y
+        self.a_x = a_x
+        self.a_y = a_y
         self.repititions = repititions
 
         # Get and set the frames
         # Make sure that we have only one source for the frames
+        name = "this animation"
+        name = gif_location.split("src").pop() if gif_location is not None else name
+        name = images_location.split("src").pop() if images_location is not None else name
+        print(f"\n\nLOG:INFO::START: Parsing {name}")
         if frames is None:
             if gif_location is not None:
                 frames = Animation.load_gif_to_frames(gif_location)
@@ -126,6 +142,19 @@ class Animation:
 
         self.target_resolution = target_resolution
         frames = Animation.apply_target_resolution(frames, target_resolution)
+        # We want the animation to be updating at least every 100 ms
+        # so if the frame_timer is greater than 100ms, then reduce it to be around 100ms
+        # by increasing the amount of frames
+        if frame_multiplier is None and frame_timer > 100:
+            frame_multiplier = round(frame_timer/100)
+            frame_timer = 100
+            print(f"LOG:INFO:: frame_timer is too long in {name}! Setting timer to 100ms, but increasing frames by a factor", frame_multiplier)
+        else:
+            frame_multiplier = 1
+        
+        if reverse:
+            frames.reverse()
+            
         self.frames = [x for item in frames for x in repeat(item, frame_multiplier)]
             
     @staticmethod
@@ -265,6 +294,15 @@ class Animation:
         """
         return (self.v_x, self.v_y)
 
+
+    def get_acceleration(self) -> tuple[int, int]:
+        """returns the change in velocity that this animation expects
+
+        Returns:
+            tuple[int, int]: change in v_x, change in v_y
+        """
+        return (self.v_x, self.v_y)
+
     def __repr__(self):
         return f"<Animation: {len(self.frames)} frames each at {self.frame_timer} ms>"
 
@@ -393,7 +431,7 @@ def get_cat_animations(impath:str, target_resolution: tuple[int, int]):
         AnimationStates.SLEEP_TO_IDLE: Animation(
             [AnimationStates.IDLE], 
             gif_location=pj(impath, "sleep_to_idle.gif"),
-            target_resolution=target_resolution
+            target_resolution=target_resolution,
         ),
         AnimationStates.WALK_POSITIVE: Animation(
             standing_actions,
@@ -423,7 +461,8 @@ def get_cat_animations(impath:str, target_resolution: tuple[int, int]):
             gif_location=pj(impath, "walking_negative.gif"),
             frame_timer=10,
             frame_multiplier=2,
-            target_resolution=target_resolution
+            target_resolution=target_resolution,
+            a_y=-.3
         ),
     }
     # No landed animation, but instead return the cat to its idle animation so that 
@@ -455,16 +494,18 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
     # ! See the example in src.animations.get_cat_animations where although not having gif files for falling and landing animations 
     # ! other animations are repurposed for these animation states.
     animations: dict[AnimationStates, Animation] = {
+        ######### IDLE
         AnimationStates.IDLE: Animation(
             standing_actions, 
             images_location=pj(impath, "Idle", "Right"), 
-            frame_timer=400,
+            frame_timer=100,
             target_resolution=target_resolution
         ),
+        ######### SLEEP
         AnimationStates.IDLE_TO_SLEEP: Animation(
             [AnimationStates.SLEEP], 
             images_location=pj(impath, "Sleep", "IdleToSleep"),
-            frame_timer=400,
+            frame_timer=100,
             target_resolution=target_resolution
         ),
         AnimationStates.SLEEP: Animation(
@@ -476,58 +517,44 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
                 AnimationStates.SLEEP_TO_IDLE,
             ],
             images_location=pj(impath, "Sleep", "Sleeping"),
-            frame_timer=2000,
+            frame_timer=1000,
             target_resolution=target_resolution
         ),
         AnimationStates.SLEEP_TO_IDLE: Animation(
             [AnimationStates.IDLE], 
             images_location=pj(impath, "Sleep", "IdleToSleep"),
-            frame_timer=600,
-            target_resolution=target_resolution
+            frame_timer=200,
+            target_resolution=target_resolution,
+            reverse=True
         ),
+        ######### WALKING
         AnimationStates.WALK_POSITIVE: Animation(
             standing_actions,
-            images_location=pj(impath, "Walking"), 
-            frame_timer=400,
+            images_location=pj(impath, "Walking", "Right"), 
+            frame_timer=100,
             v_x=3,
             target_resolution=target_resolution
         ),
         AnimationStates.WALK_NEGATIVE: Animation(
             standing_actions, 
-            images_location=pj(impath, "Walking"), 
-            frame_timer=400,
+            images_location=pj(impath, "Walking", "Left"), 
+            frame_timer=100,
             v_x=-3,
             target_resolution=target_resolution
         ),
-        # There is no grabbed gif, so just speed up the walking gif
-        AnimationStates.GRABBED: Animation(
-            [AnimationStates.GRABBED],
-            images_location=pj(impath, "MouseInteractions", "Grabbed"),
-            frame_timer=50,
-            target_resolution=target_resolution
-        ),
-        # There is no falling gif, so just speed up the walking gif
-        # but as position updates after every frame of animation, incease 
-        # update speed to be smoother (increase duplicate frames to prevent)
-        # spazzing looking cat
-        AnimationStates.FALLING: Animation(
-            [AnimationStates.FALLING],
-            images_location=pj(impath, "MouseInteractions", "Falling"),
-            frame_timer=10,
-            frame_multiplier=2,
-            target_resolution=target_resolution
-        ),
+        ########## GRAZING
         AnimationStates.GRAZING_START: Animation(
             [AnimationStates.GRAZING],
             images_location=pj(impath, "Grazing", "Transition"),
-            frame_timer=500,
+            frame_timer=100,
             target_resolution=target_resolution
         ),
         AnimationStates.GRAZING_END: Animation(
             standing_actions,
             images_location=pj(impath, "Grazing", "Transition"),
-            frame_timer=1000,
-            target_resolution=target_resolution
+            frame_timer=100,
+            target_resolution=target_resolution,
+            reverse=True
         ),
         AnimationStates.GRAZING: Animation(
             [
@@ -536,8 +563,38 @@ def get_horse_animations(impath:str, target_resolution: tuple[int, int]):
                 AnimationStates.GRAZING_END
             ],
             images_location=pj(impath, "Grazing", "Active"),
-            frame_timer=700,
+            frame_timer=200,
+            target_resolution=target_resolution
+        ),
+        ########### MOUSE INTERACTIONS
+        AnimationStates.GRABBED: Animation(
+            [AnimationStates.GRABBED],
+            images_location=pj(impath, "MouseInteractions", "Grabbed"),
+            frame_timer=50,
+            target_resolution=target_resolution
+        ),
+        AnimationStates.GRAB_TO_FALL: Animation(
+            [AnimationStates.FALLING],
+            images_location=pj(impath, "MouseInteractions", "GrabToFall"),
+            frame_timer=100,
+            target_resolution=target_resolution
+        ),
+        AnimationStates.FALLING: Animation(
+            [AnimationStates.FALLING],
+            images_location=pj(impath, "MouseInteractions", "Falling"),
+            frame_timer=50,
+            frame_multiplier=2,
+            a_y=-1,
+            target_resolution=target_resolution
+        ),
+        AnimationStates.LANDED: Animation(
+            [AnimationStates.IDLE],
+            images_location=pj(impath, "MouseInteractions", "Landed"),
+            frame_timer=100,
+            frame_multiplier=2,
             target_resolution=target_resolution
         ),
     }
+
+    
     return animations

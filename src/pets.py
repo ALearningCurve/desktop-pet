@@ -15,7 +15,7 @@ class Pet:
     x: int
     y: int
     v_y: float = 0
-    a_y: float = 0.3
+    a_y: float = 0
     canvas: Canvas
     animator: Animator
 
@@ -53,9 +53,12 @@ class Pet:
         """Move the pet according to the animation and physics as well as progressing to the next frame of the animation
         """
         animation = self.get_current_animation()
-        x, y = animation.get_velocity()
-        self.x += x
-        self.y += y
+        vx, vy = animation.get_velocity()
+        # ax, ay = animation.get_acceleration()
+        # self.a_y = ay
+        # self.a_x = ax
+        self.x += vx
+        self.y += vy
         self.do_movement()
         self.progress_animation()
 
@@ -136,7 +139,14 @@ class Pet:
         # to transfer out of the falling state, there has to be a landed state. Do not go into the falling state unless
         # landed state and falling state are defined
         if AnimationStates.FALLING in self.animator.animations and AnimationStates.LANDED in self.animator.animations:
-            self.animator.set_state(AnimationStates.FALLING)
+            if AnimationStates.GRAB_TO_FALL in self.animator.animations:
+                self.animator.set_state(AnimationStates.GRAB_TO_FALL)
+            else:
+                self.animator.set_state(AnimationStates.FALLING)
+        else:
+            print("LOG:WARNING:: AnimationStates.LANDED and/or AnimationStates.FALLING are not defined, the \
+                pet cannot \"fall\" without these states being part of the pets animations!")
+            self.animator.set_state(AnimationStates.IDLE)
 
     def do_move(self, event):
         """ Mouse movement while clicked """
