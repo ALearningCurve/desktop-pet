@@ -42,7 +42,7 @@ def create_pet(should_run_preprocessing = False) -> Pet:
         ANIMATIONS = get_animations(animation_type, target_resolution)
 
     # Create the desktop pet
-    animator = Animator(state=AnimationStates.IDLE, frame_number=0, animations=ANIMATIONS)
+    animator = Animator(state=AnimationStates.SLEEP, frame_number=0, animations=ANIMATIONS)
     x = int(canvas.resolution["width"] / 2)
     y = int(canvas.resolution["height"])
     pet = Pet(x, y, canvas=canvas, animator=animator)
