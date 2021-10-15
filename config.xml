@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?> 
-<config>
+<?xml version="1.0" ?><config>
     <!-- Unless otherwise specified, this is the pet that will show up when the program runs -->
-    <defualt_pet>cat</defualt_pet>
+    <defualt_pet>horse</defualt_pet>
     <!-- Whether or not to keep the pet on top of other windows -->
     <force_topmost>true</force_topmost>
     <!-- Whether or not to run preprocessing on the images when opening them-->

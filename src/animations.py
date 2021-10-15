@@ -8,7 +8,7 @@ from os import listdir
 from os.path import isfile, join
 from typing import Callable
 from PIL import Image, ImageTk
-
+from src import logger
 
 class Canvas:
     """Represents information on the tkinter window and label as well as information of the
@@ -85,6 +85,7 @@ class Animation:
     def __init__(
         self,
         next_animation_states,
+        name: str = None,
         frames: list = None,
         gif_location: str = None,
         images_location: str = None,
@@ -102,6 +103,7 @@ class Animation:
         Args:
             next_animation_states (list[Animations]): possible animations for this animation
             to transition to once this animation finishes
+            name (str, optional): The verbose name of this animation
             frames (list[tk.PhotoImage], optional): frames of images that can be rendered by tkinter. Defaults to None.
             gif_location (str, optional): Absolute path to the gif to convert into frames. Defaults to None.
             images_location (str, optional): Absolute path to the images folder to load into frames list. Defaults to None.
@@ -125,13 +127,15 @@ class Animation:
         self.a_x = a_x
         self.a_y = a_y
         self.repititions = repititions
+        
 
         # Get and set the frames
         # Make sure that we have only one source for the frames
-        name = "this animation"
-        name = gif_location.split("src").pop() if gif_location is not None else name
-        name = images_location.split("src").pop() if images_location is not None else name
-        print(f"\n\nLOG:INFO::START: Parsing {name}")
+        if name is None:
+            name = gif_location.split("src").pop() if gif_location is not None else name
+            name = images_location.split("src").pop() if images_location is not None else name
+        self.name = name
+        logger.info(f"Loading Animation: {self.name}")
         if frames is None:
             if gif_location is not None:
                 frames = Animation.load_gif_to_frames(gif_location)
@@ -154,7 +158,8 @@ class Animation:
         if self.frame_timer > 100:
             frame_multiplier = round(frame_timer/100) * frame_multiplier # Keep the original multiplier as a factor
             self.frame_timer = 100
-            print(f"LOG:INFO:: frame_timer is too long in {name}! Setting timer to 100ms, but increasing frames by a factor", frame_multiplier)
+            logger.warning(f"frame_timer is too long in {self.name}! Setting timer to 100ms, \
+                but increasing frames by a factor of {frame_multiplier}")
         
         self.frames = [x for item in frames for x in repeat(item, frame_multiplier)]
             
@@ -245,7 +250,7 @@ class Animation:
         Args:
             path (str): absolute path to the file
         """
-        print("LOG:INFO:: START:remove_partial_transparency_png -> " + path)
+        logger.info("START:remove_partial_transparency_png -> " + path)
         # We assume that the data is a png
         png = Image.open(path)
         # Just return the image if it is not a png, we don't know the format otherwise
@@ -347,7 +352,7 @@ class Animator:
         """
         # If the state is the same, then do nothing
         # As we don't want the animation to keep reseting
-        print("LOG:INFO:: ", self.state, " to ", state)
+        logger.debug(f"{self.state.__repr__()} changing to {state.__repr__()}")
         if state == self.state:
             return False
         self.frame_number = 0
@@ -359,7 +364,7 @@ class Animator:
         return f"<Animator: {str(self.state)} on frame {self.frame_number}>"
 
 
-def get_animations(pet_name: str, target_resolution: tuple[int, int]) -> dict[AnimationStates, Animation]:
+def get_animations(pet_name: str, target_resolution: tuple[int, int], should_run_preprocessing: bool) -> dict[AnimationStates, Animation]:
     """Loads all of the animations for a pet and their source files into a dictionary
     Args:
         pet_name (str): name of the pet, ie the name of folder its animations are in 
@@ -371,7 +376,7 @@ def get_animations(pet_name: str, target_resolution: tuple[int, int]) -> dict[An
     # Path to sprites we want to use
     impath = pathlib.Path().resolve()
     impath = os.path.join(impath, "src", "sprites")
-
+    Animation.should_run_preprocessing = should_run_preprocessing
     # **** This can be whatever set of animations you want it to be
     # **** I just like horses so I have set it to that
     if pet_name == "cat":
@@ -380,11 +385,6 @@ def get_animations(pet_name: str, target_resolution: tuple[int, int]) -> dict[An
         animations = get_horse_animations(impath, target_resolution)
 
     return animations
-
-def run_preprocessing(pet_name: str, target_resolution: tuple[int, int]) -> dict[AnimationStates, Animation]:
-    """Runs preprocessing when creating the animations and then returns the processed images"""
-    Animation.should_run_preprocessing = True
-    return get_animations(pet_name, target_resolution)
 
 def get_cat_animations(impath:str, target_resolution: tuple[int, int]):
     """Loads all of the animations for a cat

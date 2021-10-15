@@ -1,5 +1,6 @@
 import tkinter as tk
 from src.animations import Animation, AnimationStates, Canvas, Animator
+from src import logger
 
 # ! IMPORTANT:
 # ! NOTE: in order to have the pet fall after being grabbed, there must be key value pair in its animator.animations dict for 
@@ -42,7 +43,7 @@ class Pet:
         self.x = int(self.x + self.v_x)
         self.y = int(self.y + self.v_y)
         
-        print(f"({self.a_x}, {self.a_y}), ({self.v_x}, {self.v_y}), ({self.x}, {self.y}) (anim {self.get_current_animation().a_y})")
+        logger.debug(f"Pet Anim/Movement: accel:({self.a_x}, {self.a_y}), vel:({self.v_x}, {self.v_y}), posn:({self.x}, {self.y}) anim:{self.get_current_animation().a_y}")
 
         # check and move x to be on screen
         size = self.animator.animations[self.animator.state].target_resolution
@@ -107,12 +108,14 @@ class Pet:
         """
         animation = self.get_current_animation()
         if self.animator.frame_number < len(animation.frames) - 1:
+            logger.debug("frame repeating")
             self.animator.frame_number += 1
         else:
+            logger.debug("getting next state")
             self.animator.frame_number = 0
             self.set_animation_state(animation.next(self.animator))
 
-    #   print(self.animator.state, self.animator.frame_number)
+        logger.debug(f"{self.animator.state.__repr__()}, {self.animator.frame_number}")
 
     def get_current_animation(self) -> Animation:
         """Returns the current animation of the Pet instance
@@ -168,7 +171,7 @@ class Pet:
             else:
                 self.set_animation_state(AnimationStates.FALLING)
         else:
-            print("LOG:WARNING:: AnimationStates.LANDED and/or AnimationStates.FALLING are not defined, the \
+            logger.warning(f"AnimationStates.LANDED and/or AnimationStates.FALLING are not defined, the \
                 pet cannot \"fall\" without these states being part of the pets animations!")
             self.set_animation_state(AnimationStates.IDLE)
 
