@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<config>
+    <!-- Unless otherwise specified, this is the pet that will show up when the program runs -->
+    <defualt_pet>cat</defualt_pet>
+    <!-- Whether or not to keep the pet on top of other windows -->
+    <force_topmost>true</force_topmost>
+    <!-- Whether or not to run preprocessing on the images when opening them-->
+    <should_run_preprocessing>false</should_run_preprocessing>
+    <!-- Animations/Pets that can be used by the program -->
+    <pets>
+        <pet name="cat">
+            <!-- Offset from the bottom of the screen in px -->
+            <offset>100</offset>
+            <!-- This background color is keyed out
+            to make a transparent window -->
+            <bg_color>#000</bg_color>
+            <!-- Size of the pet (animation frames) are scaled
+            to match this scale -->
+            <resolution>
+                <x>300</x>
+                <y>300</y>
+            </resolution>
+        </pet>
+        <pet name="horse">
+            <!-- Offset from the bottom of the screen in px -->
+            <offset>100</offset>
+            <!-- This background color is keyed out
+            to make a transparent window -->
+            <bg_color>#ff0000</bg_color>
+            <!-- Size of the pet (animation frames) are scaled
+            to match this scale -->
+            <resolution>
+                <x>300</x>
+                <y>300</y>
+            </resolution>
+        </pet>
+    </pets>
+</config>
