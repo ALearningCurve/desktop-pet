@@ -1,27 +1,68 @@
 import tkinter as tk
-from tkinter.constants import FALSE
 from src.animations import AnimationStates, Animator, Canvas, get_animations
 from src.pets import Pet
 from screeninfo import get_monitors
 from xml.dom import minidom
 import distutils.util
 from src import logger
+import pathlib
+import os
+from pystray import MenuItem as item
+import pystray
+from PIL import Image
+import time
+
+def show_in_taskbar(root):
+    """Make it so window appears in the task bar. This only works for windows
+    https://stackoverflow.com/questions/31123663/make-tkinter-window-appear-in-the-taskbar
+
+    Args:
+        root (tk.Tk): root window
+    """
+
+    root.wm_withdraw()
+    root.after(10, lambda: root.wm_deiconify())
+
+def hide_window(window):
+
+    def exit_action(icon):
+        # icon.visible = False
+        icon.stop()
+        window.destroy()
+        
+    def show():
+        window.deiconify()
+        window.mainloop()
+
+    window.withdraw()
+    icon = pystray.Icon("DesktopPet")
+    icon.menu = (item('exit', lambda: exit_action(icon)), item('show', show))
+    icon.icon = Image.open(os.path.join(pathlib.Path().resolve(), "icon.ico"))
+    icon.title = "DesktopPet"
+    icon.run()
 
 def xml_bool(val):
     return bool(distutils.util.strtobool(val))
 
-def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
-    """Creates a pet from the configuration object
+def create_pet(current_pet: str = None) -> Pet:
+    """Creates a window and pet from the configuration xml and then shows that pet
+
+    Args:
+        current_pet (str, optional): [description]. Defaults to None.
+
+    Raises:
+        Exception: [description]
 
     Returns:
-        Pet
+        Pet: [description]
     """
     logger.debug('Loading general configuration from XML')
     ### General Configuration
-    dom = minidom.parse('config.xml')
+    config_location = os.path.join(pathlib.Path().resolve(), "config.xml")
+    dom = minidom.parse(config_location)
     current_pet =  dom.getElementsByTagName('defualt_pet')[0].firstChild.nodeValue if current_pet is None else current_pet
     topmost = xml_bool(dom.getElementsByTagName('force_topmost')[0].firstChild.nodeValue)
-    should_run_preprocessing = xml_bool(dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.nodeValue) if should_run_preprocessing is None else should_run_preprocessing
+    should_run_preprocessing = xml_bool(dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.nodeValue)
 
     ### Animation Specific Configuration
     # Find the desired pet
@@ -52,19 +93,30 @@ def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
     resolution = {"width": int(monitor.width), "height": int(monitor.height - offset)}
     window = tk.Tk()
 
-    ## We pick a transparent color here for the background
+    # We pick a transparent color here for the background
     # ! This should be different for mac as mac os has alpha channel
     # ! so this is not really needed there
     window.config(highlightbackground=bg_color)
     label = tk.Label(window, bd=0, bg=bg_color)
     window.overrideredirect(True)
+    window.update_idletasks()
     window.wm_attributes("-transparentcolor", bg_color)
     label.pack()
-    ## Set on top attribute to True (at least at first) to bring it to the top
+
+    # Set on top attribute to True (at least at first) to bring it to the top
     window.wm_attributes('-topmost', True)
     window.update()
     window.wm_attributes('-topmost', topmost)
+    # update name and icon of the window
+    window.winfo_toplevel().title("Desktop " + current_pet[0].upper() + current_pet[1:])
+    window.iconbitmap(os.path.join(pathlib.Path().resolve(), "icon.ico"))
+    # Remove minimize/close buttuns and titlebar, but 
+    # keep in the taskbar
+    window.overrideredirect(True)
+    window.after(10, lambda: show_in_taskbar(window))
     canvas = Canvas(window, label, resolution)
+    # But also show in the system tray
+    window.protocol('WM_DELETE_WINDOW', lambda: hide_window(window))
     
     ## Load the animations. 
     # ! NOTE, this has to be done after setting up the tikinter window
@@ -89,7 +141,7 @@ def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
 
     # Save any changes in the configuration 
     # that happened during initialization
-    with open("config.xml", "w") as f:
+    with open(config_location, "w") as f:
         f.write(dom.toxml())
 
     # Begin the main loop

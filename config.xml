@@ -23,7 +23,7 @@
         </pet>
         <!-- See the above pet to see the commented fields -->
         <pet name="horse">
-            <offset>0</offset>
+            <offset>10</offset>
             <bg_color>#ff0000</bg_color>
             <resolution>
                 <x>300</x>

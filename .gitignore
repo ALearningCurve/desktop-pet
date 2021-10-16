@@ -5,3 +5,4 @@ venv/*
 file.log
 dist/*
 build/*
+__pycache__/*
