@@ -11,7 +11,8 @@
             <!-- Offset from the bottom of the screen in px -->
             <offset>100</offset>
             <!-- This background color is keyed out
-            to make a transparent window -->
+            to make a transparent window as windows has no straight alpha channel,
+            so this should match the background color of your source images/gif -->
             <bg_color>#000</bg_color>
             <!-- Size of the pet (animation frames) are scaled
             to match this scale -->
@@ -20,14 +21,10 @@
                 <y>300</y>
             </resolution>
         </pet>
+        <!-- See the above pet to see the commented fields -->
         <pet name="horse">
-            <!-- Offset from the bottom of the screen in px -->
-            <offset>100</offset>
-            <!-- This background color is keyed out
-            to make a transparent window -->
+            <offset>0</offset>
             <bg_color>#ff0000</bg_color>
-            <!-- Size of the pet (animation frames) are scaled
-            to match this scale -->
             <resolution>
                 <x>300</x>
                 <y>300</y>

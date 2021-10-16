@@ -9,6 +9,7 @@ from src import logger
 
 def xml_bool(val):
     return bool(distutils.util.strtobool(val))
+
 def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
     """Creates a pet from the configuration object
 
@@ -20,7 +21,7 @@ def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
     dom = minidom.parse('config.xml')
     current_pet =  dom.getElementsByTagName('defualt_pet')[0].firstChild.nodeValue if current_pet is None else current_pet
     topmost = xml_bool(dom.getElementsByTagName('force_topmost')[0].firstChild.nodeValue)
-    should_run_preprocessing = xml_bool(dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.nodeValue)
+    should_run_preprocessing = xml_bool(dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.nodeValue) if should_run_preprocessing is None else should_run_preprocessing
 
     ### Animation Specific Configuration
     # Find the desired pet
@@ -69,8 +70,9 @@ def create_pet(should_run_preprocessing = None, current_pet = None) -> Pet:
     # ! NOTE, this has to be done after setting up the tikinter window
     logger.debug('Starting to load animations')
     animations = get_animations(current_pet, target_resolution, should_run_preprocessing)
-    animator = Animator(state=AnimationStates.SLEEP, frame_number=0, animations=animations)
-    # We esentially only need to run preprocessing once per animation
+    animator = Animator(state=AnimationStates.IDLE, frame_number=0, animations=animations)
+    # We esentially only need to run preprocessing once as it is really expensive to do
+    # so make it false for the next time the program runs
     dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.replaceWholeText("false")
     
     ## Initialize pet

@@ -1,3 +1,3 @@
 from src.main import create_pet
 
-create_pet(False)
+create_pet()
