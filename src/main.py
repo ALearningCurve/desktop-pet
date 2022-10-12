@@ -1,5 +1,5 @@
 import tkinter as tk
-from src.animations import AnimationStates, Animator, Canvas, get_animations
+from .animation import AnimationStates, Animator, Canvas, get_animations
 from src.pets import Pet
 from screeninfo import get_monitors
 from xml.dom import minidom
@@ -12,6 +12,7 @@ import pystray
 from PIL import Image
 import time
 
+
 def show_in_taskbar(root):
     """Make it so window appears in the task bar. This only works for windows
     https://stackoverflow.com/questions/31123663/make-tkinter-window-appear-in-the-taskbar
@@ -23,26 +24,28 @@ def show_in_taskbar(root):
     root.wm_withdraw()
     root.after(10, lambda: root.wm_deiconify())
 
-def hide_window(window):
 
+def hide_window(window):
     def exit_action(icon):
         # icon.visible = False
         icon.stop()
         window.destroy()
-        
+
     def show():
         window.deiconify()
         window.mainloop()
 
     window.withdraw()
     icon = pystray.Icon("DesktopPet")
-    icon.menu = (item('exit', lambda: exit_action(icon)), item('show', show))
+    icon.menu = (item("exit", lambda: exit_action(icon)), item("show", show))
     icon.icon = Image.open(os.path.join(pathlib.Path().resolve(), "icon.ico"))
     icon.title = "DesktopPet"
     icon.run()
 
+
 def xml_bool(val):
     return bool(distutils.util.strtobool(val))
+
 
 def create_pet(current_pet: str = None) -> Pet:
     """Creates a window and pet from the configuration xml and then shows that pet
@@ -56,37 +59,47 @@ def create_pet(current_pet: str = None) -> Pet:
     Returns:
         Pet: [description]
     """
-    logger.debug('Loading general configuration from XML')
+    logger.debug("Loading general configuration from XML")
     ### General Configuration
     config_location = os.path.join(pathlib.Path().resolve(), "config.xml")
     dom = minidom.parse(config_location)
-    current_pet =  dom.getElementsByTagName('defualt_pet')[0].firstChild.nodeValue if current_pet is None else current_pet
-    topmost = xml_bool(dom.getElementsByTagName('force_topmost')[0].firstChild.nodeValue)
-    should_run_preprocessing = xml_bool(dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.nodeValue)
+    current_pet = (
+        dom.getElementsByTagName("defualt_pet")[0].firstChild.nodeValue
+        if current_pet is None
+        else current_pet
+    )
+    topmost = xml_bool(
+        dom.getElementsByTagName("force_topmost")[0].firstChild.nodeValue
+    )
+    should_run_preprocessing = xml_bool(
+        dom.getElementsByTagName("should_run_preprocessing")[0].firstChild.nodeValue
+    )
 
     ### Animation Specific Configuration
     # Find the desired pet
     logger.debug('Finding "current_pet" configurations from the XML')
-    pets = dom.getElementsByTagName('pet')
+    pets = dom.getElementsByTagName("pet")
     pet_config = None
     for i in range(len(pets)):
-        if pets[i].getAttribute('name') == current_pet:
+        if pets[i].getAttribute("name") == current_pet:
             pet_config = pets[i]
     if pet_config is None:
-        raise Exception("Could not find the current pet as one of \
+        raise Exception(
+            "Could not find the current pet as one of \
             the supported pets in the config.xml. 'current_pet' must \
-            match one of the 'pet' element's 'name' attribute")     
+            match one of the 'pet' element's 'name' attribute"
+        )
     # Find the config for that pet
-    offset = int(pet_config.getElementsByTagName('offset')[0].firstChild.nodeValue)
-     # ! this color will need to change for each of the different background color in order for it to be transparent
-    bg_color = pet_config.getElementsByTagName('bg_color')[0].firstChild.nodeValue
-    tmp = pet_config.getElementsByTagName('resolution')[0]
+    offset = int(pet_config.getElementsByTagName("offset")[0].firstChild.nodeValue)
+    # ! this color will need to change for each of the different background color in order for it to be transparent
+    bg_color = pet_config.getElementsByTagName("bg_color")[0].firstChild.nodeValue
+    tmp = pet_config.getElementsByTagName("resolution")[0]
     target_resolution = (
         int(tmp.getElementsByTagName("x")[0].firstChild.nodeValue),
-        int(tmp.getElementsByTagName("y")[0].firstChild.nodeValue)
+        int(tmp.getElementsByTagName("y")[0].firstChild.nodeValue),
     )
 
-    logger.debug('Creating tkinter window/config')
+    logger.debug("Creating tkinter window/config")
     ### Window Configuration
     # Get info on the primary monitor (that is where the pet will be)
     monitor = get_monitors()[0]
@@ -104,32 +117,38 @@ def create_pet(current_pet: str = None) -> Pet:
     label.pack()
 
     # Set on top attribute to True (at least at first) to bring it to the top
-    window.wm_attributes('-topmost', True)
+    window.wm_attributes("-topmost", True)
     window.update()
-    window.wm_attributes('-topmost', topmost)
+    window.wm_attributes("-topmost", topmost)
     # update name and icon of the window
     window.winfo_toplevel().title("Desktop " + current_pet[0].upper() + current_pet[1:])
     window.iconbitmap(os.path.join(pathlib.Path().resolve(), "icon.ico"))
-    # Remove minimize/close buttuns and titlebar, but 
+    # Remove minimize/close buttuns and titlebar, but
     # keep in the taskbar
     window.overrideredirect(True)
     window.after(10, lambda: show_in_taskbar(window))
     canvas = Canvas(window, label, resolution)
     # But also show in the system tray
-    window.protocol('WM_DELETE_WINDOW', lambda: hide_window(window))
-    
-    ## Load the animations. 
+    window.protocol("WM_DELETE_WINDOW", lambda: hide_window(window))
+
+    ## Load the animations.
     # ! NOTE, this has to be done after setting up the tikinter window
-    logger.debug('Starting to load animations')
-    animations = get_animations(current_pet, target_resolution, should_run_preprocessing)
-    animator = Animator(state=AnimationStates.IDLE, frame_number=0, animations=animations)
+    logger.debug("Starting to load animations")
+    animations = get_animations(
+        current_pet, target_resolution, should_run_preprocessing
+    )
+    animator = Animator(
+        state=AnimationStates.IDLE, frame_number=0, animations=animations
+    )
     # We esentially only need to run preprocessing once as it is really expensive to do
     # so make it false for the next time the program runs
-    dom.getElementsByTagName('should_run_preprocessing')[0].firstChild.replaceWholeText("false")
-    
+    dom.getElementsByTagName("should_run_preprocessing")[0].firstChild.replaceWholeText(
+        "false"
+    )
+
     ## Initialize pet
     # Create the desktop pet
-    logger.debug('Create pet')
+    logger.debug("Create pet")
     x = int(canvas.resolution["width"] / 2)
     y = int(canvas.resolution["height"])
     pet = Pet(x, y, canvas=canvas, animator=animator)
@@ -139,7 +158,7 @@ def create_pet(current_pet: str = None) -> Pet:
     label.bind("<B1-Motion>", pet.do_move)
     logger.info(pet.__repr__())
 
-    # Save any changes in the configuration 
+    # Save any changes in the configuration
     # that happened during initialization
     with open(config_location, "w") as f:
         f.write(dom.toxml())
