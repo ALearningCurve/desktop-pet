@@ -13,8 +13,8 @@ After those 4 steps simply run the project and you should see your pet on your d
 
 ## Installation and Testing
 `python3 -m venv venv`
-`pip install -r requirements.txt`
 `.\venv\Scripts\activate.ps1`
+`pip install -r requirements.txt`
 `python run.py`
 
 ## Bundling and Creating an Executable
