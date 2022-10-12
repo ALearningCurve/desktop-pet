@@ -9,10 +9,7 @@ from src import logger
 import pathlib
 import os
 from .window_utils import configure_window, show_window
-
-
-def xml_bool(val):
-    return bool(distutils.util.strtobool(val))
+from .config_reader import XMLReader
 
 
 def start_program(current_pet: str = None):
@@ -26,69 +23,44 @@ def start_program(current_pet: str = None):
     """
     logger.debug("Loading general configuration from XML")
     ### General Configuration
-    config_location = os.path.join(pathlib.Path().resolve(), "config.xml")
-    dom = minidom.parse(config_location)
-    current_pet = (
-        dom.getElementsByTagName("defualt_pet")[0].firstChild.nodeValue
-        if current_pet is None
-        else current_pet
-    )
-    topmost = xml_bool(
-        dom.getElementsByTagName("force_topmost")[0].firstChild.nodeValue
-    )
-    should_run_preprocessing = xml_bool(
-        dom.getElementsByTagName("should_run_preprocessing")[0].firstChild.nodeValue
-    )
+    config = XMLReader()
+    current_pet = config.getDefaultPet() if current_pet is None else current_pet
+    topmost = config.getForceTopMostWindow()
+    should_run_preprocessing = config.getShouldRunAnimationPreprocessing()
 
     ### Animation Specific Configuration
     # Find the desired pet
     logger.debug('Finding "current_pet" configurations from the XML')
-    pets = dom.getElementsByTagName("pet")
-    pet_config = None
-    for i in range(len(pets)):
-        if pets[i].getAttribute("name") == current_pet:
-            pet_config = pets[i]
-    if pet_config is None:
-        raise Exception(
-            "Could not find the current pet as one of \
-            the supported pets in the config.xml. 'current_pet' must \
-            match one of the 'pet' element's 'name' attribute"
-        )
+    pet_config = config.getMatchingPetConfigurationClean(current_pet)
+
     # Find the config for that pet
-    offset = int(pet_config.getElementsByTagName("offset")[0].firstChild.nodeValue)
-    # ! this color will need to change for each of the different background color in order for it to be transparent
-    bg_color = pet_config.getElementsByTagName("bg_color")[0].firstChild.nodeValue
-    tmp = pet_config.getElementsByTagName("resolution")[0]
-    target_resolution = (
-        int(tmp.getElementsByTagName("x")[0].firstChild.nodeValue),
-        int(tmp.getElementsByTagName("y")[0].firstChild.nodeValue),
-    )
 
     logger.debug("Creating tkinter window/config")
     ### Window Configuration
     # Get info on the primary monitor (that is where the pet will be)
     monitor = get_monitors()[0]
-    resolution = {"width": int(monitor.width), "height": int(monitor.height - offset)}
+    resolution = {
+        "width": int(monitor.width),
+        "height": int(monitor.height - pet_config.offset),
+    }
     window = tk.Tk()
 
     canvas = configure_window(
-        window, topmost=topmost, bg_color=bg_color, resolution=resolution
+        window, topmost=topmost, bg_color=pet_config.bg_color, resolution=resolution
     )
 
     ## Load the animations.
     # ! NOTE, this has to be done after setting up the tkinter window
     logger.debug("Starting to load animations")
     animations = get_animations(
-        current_pet, target_resolution, should_run_preprocessing
+        current_pet, pet_config.target_resolution, should_run_preprocessing
     )
     animator = Animator(
         state=AnimationStates.IDLE, frame_number=0, animations=animations
     )
     # We esentially only need to run preprocessing once as it is really expensive to do
     # so make it false for the next time the program runs
-    dom.getElementsByTagName("should_run_preprocessing")[0].firstChild.replaceWholeText(
-        "false"
-    )
+    config.setFirstTagValue("should_run_preprocessing", "false")
 
     ## Initialize pet
     # Create the desktop pet
@@ -102,10 +74,7 @@ def start_program(current_pet: str = None):
     canvas.label.bind("<B1-Motion>", pet.do_move)
     logger.info(pet.__repr__())
 
-    # Save any changes in the configuration
-    # that happened during initialization
-    with open(config_location, "w") as f:
-        f.write(dom.toxml())
+    config.save()
 
     # Begin the main loop
     window.after(1, pet.on_tick)
