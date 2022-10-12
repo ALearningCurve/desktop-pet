@@ -1,6 +1,8 @@
 import tkinter as tk
+
 from ..animation import Animation, AnimationStates, Animator
 from ..window_utils import Canvas
+from .simple_pet import SimplePet
 from src import logger
 
 # ! IMPORTANT:
@@ -8,26 +10,18 @@ from src import logger
 # ! AnimationStates.FALLING, and then for the falling animation to end there must be an animation for AnimationStates.LANDED.
 # ! See the example in src.animations.get_cat_animations where although not having gif files for falling and landing animations
 # ! other animations are repurposed for these animation states.
-class Pet:
+class InteractablePet(SimplePet):
     """Represents a Virtual Desktop Pet that has animations, basic physics, can be picked up, and will stay on screen.
     This class can use a variety of diferent animations as definied in its animator.
     """
 
-    x: int
-    y: int
     v_x: float = 0
     v_y: float = 0
     a_x: float = 0
     a_y: float = 0
 
-    canvas: Canvas
-    animator: Animator
-
     def __init__(self, x, y, canvas, animator):
-        self.x = x
-        self.y = y
-        self.canvas = canvas
-        self.animator = animator
+        super().__init__(x, y, canvas, animator)
 
     def reset_movement(self):
         """Resets the movement information for the pet based on the current animation"""
@@ -71,81 +65,15 @@ class Pet:
     def update(self):
         """Move the pet according to the animation and physics as well as progressing to the next frame of the animation"""
         self.do_movement()
-        self.progress_animation()
-
-    def draw(self) -> tk.PhotoImage:
-        """Ussing the
-
-        Returns:
-            tk.PhotoImage: image of animation to draw
-        """
-        animation = self.get_current_animation()
-        return animation.frames[self.animator.frame_number]
+        super().update()
 
     def on_tick(self):
         """Draw the current animation"""
         self.update()
-        frame = self.draw()
-        self.set_geometry()
+        frame = super().get_curent_animation_frame()
+        super().set_geometry()
         self.canvas.label.configure(image=frame)
         self.canvas.window.after(1, self.handle_event)
-
-    # transfer random no. to event
-    def handle_event(self):
-        """Part of animation loop, after delay between frames in animation
-        proceed to begin logic of drawing next frame
-
-        Raises:
-            Exception: [description]
-        """
-        self.canvas.window.after(
-            self.animator.animations[self.animator.state].frame_timer, self.on_tick
-        )
-
-    # making gif work
-    def progress_animation(self):
-        """Move the animation forward one frame. If the animation has finished (ie current frame is
-        the last frame) then try to progress to the next animation
-        """
-        animation = self.get_current_animation()
-        if self.animator.frame_number < len(animation.frames) - 1:
-            logger.debug("frame repeating")
-            self.animator.frame_number += 1
-        else:
-            logger.debug("getting next state")
-            self.animator.frame_number = 0
-            self.set_animation_state(animation.next(self.animator))
-
-        logger.debug(f"{self.animator.state.__repr__()}, {self.animator.frame_number}")
-
-    def get_current_animation(self) -> Animation:
-        """Returns the current animation of the Pet instance
-
-        Returns:
-            Animation
-        """
-        return self.animator.animations[self.animator.state]
-
-    def set_animation_state(self, state: AnimationStates) -> bool:
-        """Sets the animation state for this pet
-
-        Args:
-            state (AnimationStates): Animation state to try to set
-
-        Returns:
-            bool: Whether or not the state actually changed values
-        """
-        changed = self.animator.set_animation_state(state)
-        if changed:
-            self.reset_movement()
-        return changed
-
-    def set_geometry(self):
-        """Update the window position and scale to match that of the pet instance's location and size"""
-        size = self.animator.animations[self.animator.state].target_resolution
-        self.canvas.window.geometry(
-            str(size[0]) + "x" + str(size[1]) + "+" + str(self.x) + "+" + str(self.y)
-        )
 
     def __repr__(self):
         size = self.animator.animations[self.animator.state].target_resolution

@@ -1,1 +1,1 @@
-from .pet import Pet
+from .interactable_pet import InteractablePet as Pet
