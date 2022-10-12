@@ -33,10 +33,8 @@ def start_program(current_pet: str = None):
     logger.debug('Finding "current_pet" configurations from the XML')
     pet_config = config.getMatchingPetConfigurationClean(current_pet)
 
-    # Find the config for that pet
-
-    logger.debug("Creating tkinter window/config")
     ### Window Configuration
+    logger.debug("Creating tkinter window/config")
     # Get info on the primary monitor (that is where the pet will be)
     monitor = get_monitors()[0]
     resolution = {
@@ -44,23 +42,25 @@ def start_program(current_pet: str = None):
         "height": int(monitor.height - pet_config.offset),
     }
     window = tk.Tk()
-
     canvas = configure_window(
         window, topmost=topmost, bg_color=pet_config.bg_color, resolution=resolution
     )
 
     ## Load the animations.
-    # ! NOTE, this has to be done after setting up the tkinter window
     logger.debug("Starting to load animations")
     animations = get_animations(
         current_pet, pet_config.target_resolution, should_run_preprocessing
     )
+
     animator = Animator(
         state=AnimationStates.IDLE, frame_number=0, animations=animations
     )
+
     # We esentially only need to run preprocessing once as it is really expensive to do
     # so make it false for the next time the program runs
-    config.setFirstTagValue("should_run_preprocessing", "false")
+    if should_run_preprocessing:
+        config.setFirstTagValue("should_run_preprocessing", "false")
+        config.save()
 
     ## Initialize pet
     # Create the desktop pet
@@ -73,8 +73,6 @@ def start_program(current_pet: str = None):
     canvas.label.bind("<ButtonRelease-1>", pet.stop_move)
     canvas.label.bind("<B1-Motion>", pet.do_move)
     logger.info(pet.__repr__())
-
-    config.save()
 
     # Begin the main loop
     window.after(1, pet.on_tick)
