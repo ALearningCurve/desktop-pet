@@ -1,5 +1,6 @@
 import tkinter as tk
-from .animation import Animation, AnimationStates, Canvas, Animator
+from ..animation import Animation, AnimationStates, Animator
+from ..window_utils import Canvas
 from src import logger
 
 # ! IMPORTANT:

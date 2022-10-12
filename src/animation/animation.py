@@ -1,14 +1,11 @@
-from enum import Enum, auto
 import tkinter as tk
 import random
 from itertools import repeat
-import pathlib
-import os
 from os import listdir
 from os.path import isfile, join
-from typing import Callable, Tuple, Dict
+from typing import Tuple
 from typing import List
-from PIL import Image, ImageTk
+from PIL import Image
 from src import logger
 from .animation_states import AnimationStates
 

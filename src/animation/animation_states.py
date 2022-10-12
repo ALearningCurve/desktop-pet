@@ -5,7 +5,7 @@ class AnimationStates(Enum):
     """Represents all the possible animation states for our desktop pet"""
 
     # Recommended all pets have these first few states
-    IDLE = auto()
+    IDLE = "idle"
     IDLE_TO_SLEEP = auto()
     SLEEP_TO_IDLE = auto()
     SLEEP = auto()

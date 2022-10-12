@@ -1,4 +1,4 @@
-from src.main import create_pet
+from src.main import start_program
 import os
 import sys
 
@@ -11,8 +11,8 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 # make the pet and display it!
 if len(sys.argv) == 2:
     # This will be used to allow user to make a specific pet regardless of the default pet
-    create_pet(sys.argv[1])
+    start_program(sys.argv[1])
 elif len(sys.argv) > 2:
     raise Exception(f"Expected 0 or 1 positional arguments, not {len(sys.argv) - 1}")
 else:
-    create_pet()
+    start_program()
